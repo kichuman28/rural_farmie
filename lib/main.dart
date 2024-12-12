@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'login_page.dart';
 import 'home_page.dart';
 import 'widgets/loading_animation.dart';
+import 'widgets/bottom_nav_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +41,7 @@ class AuthWrapper extends StatelessWidget {
 
         // Determine which page to show based on authentication state
         if (snapshot.hasData) {
-          return HomePage();
+          return BottomNavWrapper();
         } else {
           return LoginPage();
         }
