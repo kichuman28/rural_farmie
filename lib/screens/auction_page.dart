@@ -266,16 +266,19 @@ class _AuctionPageState extends State<AuctionPage> with SingleTickerProviderStat
   Widget _getStatusIndicator(AuctionItem item) {
     Color color;
     if (item.endTime.isAfter(DateTime.now())) {
-      color = Colors.green; // Active auction
+      color = Colors.red; // Active auction
     } else if (item.status == AuctionStatus.closed) {
-      color = Colors.red; // Auction completely over
+      color = Colors.green; // Auction completely over
     } else {
       color = Colors.yellow; // Bidding time over but unsold
     }
     return Container(
       width: 10,
       height: 10,
-      color: color,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
     );
   }
 }
