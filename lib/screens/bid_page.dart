@@ -27,6 +27,13 @@ class _BidPageState extends State<BidPage> {
       return;
     }
 
+    if (user.uid == widget.item.sellerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('You cannot bid on your own product.')),
+      );
+      return;
+    }
+
     if (newBid > widget.item.currentBid) {
       final bid = Bid(
         bidderId: user.uid,
