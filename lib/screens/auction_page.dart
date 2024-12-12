@@ -5,6 +5,7 @@ import 'add_product_page.dart';
 import 'bid_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auction_detail_page.dart';
+import '../widgets/auction_card.dart';
 
 class AuctionPage extends StatefulWidget {
   @override
@@ -33,182 +34,127 @@ class _AuctionPageState extends State<AuctionPage> with SingleTickerProviderStat
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Auction'),
+          elevation: 0,
+          title: Text('FarmBid Market'),
           bottom: TabBar(
+            indicatorColor: Colors.white,
+            indicatorWeight: 3,
             tabs: [
-              Tab(text: 'Available Auctions'),
-              Tab(text: 'My Auctions'),
+              Tab(
+                icon: Icon(Icons.gavel),
+                text: 'Available Auctions',
+              ),
+              Tab(
+                icon: Icon(Icons.inventory),
+                text: 'My Auctions',
+              ),
             ],
           ),
           actions: [
             IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AddProductPage()),
-                );
-              },
+              icon: Icon(Icons.add_circle_outline),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddProductPage()),
+              ),
             ),
           ],
         ),
         body: TabBarView(
           children: [
-            // Available Auctions Section
-            Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      labelText: 'Search Auctions',
-                      suffixIcon: Icon(Icons.search),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
-                  ),
-                ),
-                DropdownButton<String>(
-                  value: _selectedCategory,
-                  hint: Text('Select Category'),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedCategory = newValue;
-                    });
-                  },
-                  items: categories.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-                Expanded(
-                  child: StreamBuilder<List<AuctionItem>>(
-                    stream: _auctionService.getAuctionItems(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      }
-
-                      final auctionItems = snapshot.data ?? [];
-                      final availableItems = auctionItems
-                          .where((item) => item.sellerId != currentUser?.uid)
-                          .where((item) =>
-                              _selectedCategory == null ||
-                              _selectedCategory == 'All' ||
-                              item.category == _selectedCategory)
-                          .where((item) => item.name
-                              .toLowerCase()
-                              .contains(_searchQuery.toLowerCase()))
-                          .toList();
-
-                      if (availableItems.isEmpty) {
-                        return Center(child: Text('No available auctions right now.'));
-                      }
-
-                      return ListView.builder(
-                        itemCount: availableItems.length,
-                        itemBuilder: (context, index) {
-                          final item = availableItems[index];
-                          final remainingTime = item.endTime.difference(DateTime.now());
-                          return Card(
-                            margin: EdgeInsets.all(8.0),
-                            child: ListTile(
-                              title: Text(item.name),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Current Bid: \$${item.currentBid}'),
-                                  Text('Seller: ${item.sellerName}'),
-                                  Text('Time Remaining: ${remainingTime.inHours}h ${remainingTime.inMinutes.remainder(60)}m'),
-                                ],
-                              ),
-                              trailing: CircularProgressIndicator(
-                                value: remainingTime.inSeconds > 0
-                                    ? (remainingTime.inSeconds / item.endTime.difference(DateTime.now()).inSeconds)
-                                    : 0,
-                              ),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => BidPage(item: item),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            // My Auctions Section
-            StreamBuilder<List<AuctionItem>>(
-              stream: _auctionService.getAuctionItems(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                final auctionItems = snapshot.data ?? [];
-                final myItems = auctionItems
-                    .where((item) => item.sellerId == currentUser?.uid)
-                    .toList();
-
-                if (myItems.isEmpty) {
-                  return Center(child: Text('You have no active auctions.'));
-                }
-
-                return ListView.builder(
-                  itemCount: myItems.length,
-                  itemBuilder: (context, index) {
-                    final item = myItems[index];
-                    final remainingTime = item.endTime.difference(DateTime.now());
-                    return GestureDetector(
-                      onLongPress: () async {
-                        await Future.delayed(Duration(milliseconds: 300)); // Delay before showing dialog
-                        _showCloseAuctionDialog(context, item.id, item.endTime);
-                      },
-                      child: Card(
-                        margin: EdgeInsets.all(8.0),
-                        color: remainingTime.isNegative ? Colors.red[100] : Colors.white, // Change color if expired
-                        child: ListTile(
-                          title: Text(item.name),
-                          subtitle: Text(
-                            'Current Bid: \$${item.currentBid}\nTime Remaining: ${remainingTime.inHours}h ${remainingTime.inMinutes.remainder(60)}m',
-                          ),
-                          trailing: _getStatusIndicator(item),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AuctionDetailPage(item: item),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            _buildAvailableAuctionsTab(),
+            _buildMyAuctionsTab(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAvailableAuctionsTab() {
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    
+    return Column(
+      children: [
+        _buildSearchAndFilter(),
+        Expanded(
+          child: StreamBuilder<List<AuctionItem>>(
+            stream: _auctionService.getAuctionItems(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              final auctionItems = snapshot.data ?? [];
+              final availableItems = auctionItems
+                  .where((item) => item.sellerId != currentUser?.uid)
+                  .where((item) =>
+                      _selectedCategory == null ||
+                      _selectedCategory == 'All' ||
+                      item.category == _selectedCategory)
+                  .where((item) => item.name
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()))
+                  .toList();
+
+              if (availableItems.isEmpty) {
+                return Center(child: Text('No available auctions right now.'));
+              }
+
+              return ListView.builder(
+                padding: EdgeInsets.only(top: 8),
+                itemCount: availableItems.length,
+                itemBuilder: (context, index) => AuctionCard(
+                  item: availableItems[index],
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BidPage(item: availableItems[index]),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchAndFilter() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        children: [
+          TextField(
+            decoration: InputDecoration(
+              labelText: 'Search Auctions',
+              suffixIcon: Icon(Icons.search),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+          DropdownButton<String>(
+            value: _selectedCategory,
+            hint: Text('Select Category'),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedCategory = newValue;
+              });
+            },
+            items: categories.map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -280,5 +226,112 @@ class _AuctionPageState extends State<AuctionPage> with SingleTickerProviderStat
         shape: BoxShape.circle,
       ),
     );
+  }
+
+  Widget _buildMyAuctionsTab() {
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    
+    return StreamBuilder<List<AuctionItem>>(
+      stream: _auctionService.getAuctionItems(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final auctionItems = snapshot.data ?? [];
+        final myItems = auctionItems
+            .where((item) => item.sellerId == currentUser?.uid)
+            .toList();
+
+        if (myItems.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'No auctions yet',
+                  style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                ),
+                SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AddProductPage()),
+                  ),
+                  icon: Icon(Icons.add),
+                  label: Text('Add New Auction'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: EdgeInsets.all(8),
+          itemCount: myItems.length,
+          itemBuilder: (context, index) {
+            final item = myItems[index];
+            final remainingTime = item.endTime.difference(DateTime.now());
+            
+            return Card(
+              child: ListTile(
+                title: Text(
+                  item.name,
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Current Bid: \$${item.currentBid.toStringAsFixed(2)}'),
+                    Text('Time Remaining: ${_formatRemainingTime(remainingTime)}'),
+                  ],
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _getStatusIndicator(item),
+                    SizedBox(width: 8),
+                    if (item.endTime.isBefore(DateTime.now()) && 
+                        item.status != AuctionStatus.closed)
+                      IconButton(
+                        icon: Icon(Icons.check_circle_outline),
+                        onPressed: () => _showCloseAuctionDialog(
+                          context,
+                          item.id,
+                          item.endTime,
+                        ),
+                      ),
+                  ],
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AuctionDetailPage(item: item),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _formatRemainingTime(Duration duration) {
+    if (duration.isNegative) {
+      return 'Ended';
+    }
+    if (duration.inDays > 0) {
+      return '${duration.inDays}d ${duration.inHours.remainder(24)}h';
+    } else if (duration.inHours > 0) {
+      return '${duration.inHours}h ${duration.inMinutes.remainder(60)}m';
+    } else {
+      return '${duration.inMinutes}m';
+    }
   }
 }
