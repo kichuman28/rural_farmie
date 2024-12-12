@@ -56,4 +56,22 @@ class HomePage extends StatelessWidget {
       ),
     );
   }
-} 
+}
+
+class AuctionItem {
+  final String id;
+  final String name;
+  final String description;
+  final double startingBid;
+  double currentBid;
+  final String sellerId;
+
+  AuctionItem({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.startingBid,
+    required this.currentBid,
+    required this.sellerId,
+  });
+}

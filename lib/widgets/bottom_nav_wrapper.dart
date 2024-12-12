@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../home_page.dart';
-import '../auction_page.dart';
+import '../screens/auction_page.dart';
 import '../profile_page.dart';
 
 class BottomNavWrapper extends StatefulWidget {
