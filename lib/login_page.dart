@@ -1,8 +1,8 @@
+import 'package:app/widgets/bottom_nav_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'main.dart';
-import 'home_page.dart';
 import 'widgets/loading_animation.dart';
 
 class LoginPage extends StatefulWidget {
@@ -33,7 +33,7 @@ class _LoginPageState extends State<LoginPage> {
       await _auth.signInWithCredential(credential);
       
       if (mounted) {
-        navigateWithTransition(context, HomePage());
+        navigateWithTransition(context, BottomNavWrapper());
       }
       
     } catch (error) {
