@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../models/auction_item.dart';
 import '../services/auction_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,6 +22,7 @@ class _AddProductPageState extends State<AddProductPage> {
   final TextEditingController _durationController = TextEditingController();
   String _selectedCategory = 'Vegetables'; // Default category
   Duration _auctionDuration = Duration(hours: 12); // Default auction duration
+  bool _isLoadingLocation = false;
 
   List<String> categories = [
     'Vegetables',
@@ -29,6 +32,75 @@ class _AddProductPageState extends State<AddProductPage> {
     'Dairy',
     'Others',
   ];
+
+  Future<bool> _handleLocationPermission() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Location services are disabled. Please enable the services')),
+      );
+      return false;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Location permissions are denied')),
+        );
+        return false;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Location permissions are permanently denied')),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
+
+    final hasPermission = await _handleLocationPermission();
+    if (!hasPermission) {
+      setState(() => _isLoadingLocation = false);
+      return;
+    }
+
+    try {
+      final Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        String address = '${place.locality}, ${place.administrativeArea}';
+        setState(() {
+          _locationController.text = address;
+        });
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to get current location')),
+      );
+    } finally {
+      setState(() => _isLoadingLocation = false);
+    }
+  }
 
   void _addAuctionItem() {
     final String name = _nameController.text;
@@ -81,7 +153,7 @@ class _AddProductPageState extends State<AddProductPage> {
       appBar: AppBar(
         title: Text('Add Auction Item'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
@@ -95,7 +167,19 @@ class _AddProductPageState extends State<AddProductPage> {
             ),
             TextField(
               controller: _locationController,
-              decoration: InputDecoration(labelText: 'Location'),
+              decoration: InputDecoration(
+                labelText: 'Location',
+                suffixIcon: IconButton(
+                  icon: _isLoadingLocation 
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.my_location),
+                  onPressed: _getCurrentLocation,
+                ),
+              ),
             ),
             TextField(
               controller: _quantityController,

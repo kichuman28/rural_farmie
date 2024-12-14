@@ -9,7 +9,7 @@ class UserService {
     try {
       // Get active auctions count
       final activeAuctions = await _firestore
-          .collection('auctions')
+          .collection('auction_items')
           .where('sellerId', isEqualTo: userId)
           .where('status', isEqualTo: 'active')
           .count()
@@ -25,7 +25,7 @@ class UserService {
 
       // Get completed deals count
       final completedDeals = await _firestore
-          .collection('auctions')
+          .collection('auction_items')
           .where('sellerId', isEqualTo: userId)
           .where('status', isEqualTo: 'completed')
           .count()

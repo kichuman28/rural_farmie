@@ -36,6 +36,41 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _addTestData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final firestore = FirebaseFirestore.instance;
+
+    // Add test auctions
+    await firestore.collection('auctions').add({
+      'sellerId': user.uid,
+      'status': 'active',
+      'name': 'Test Auction 1',
+      'price': 100,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    await firestore.collection('auctions').add({
+      'sellerId': user.uid,
+      'status': 'completed',
+      'name': 'Test Auction 2',
+      'price': 200,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    // Add test bids
+    await firestore.collection('bids').add({
+      'bidderId': user.uid,
+      'status': 'active',
+      'amount': 150,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    // Refresh stats
+    _loadUserStats();
+  }
+
   @override
   Widget build(BuildContext context) {
     final User? user = _auth.currentUser;
@@ -49,6 +84,10 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () {
               // Navigate to settings page
             },
+          ),
+          IconButton(
+            icon: Icon(Icons.add_box),
+            onPressed: _addTestData,
           ),
         ],
       ),
